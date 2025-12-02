@@ -2,51 +2,43 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import joblib
 
-# 1. Load Data
-# Pastikan delimiter sesuai (dataset ini biasanya menggunakan ';')
-try:
-    df = pd.read_csv('students_dropout_academic_success.csv', delimiter=';')
-except:
-    df = pd.read_csv('students_dropout_academic_success.csv')
+# --- 1. LOAD DATA YANG BENAR ---
+# Kita langsung baca dengan delimiter koma
+df = pd.read_csv('students_dropout_academic_success.csv', delimiter=',')
 
-# 2. Seleksi Fitur (Kita ambil fitur yang paling berpengaruh untuk demo)
-# Fitur: Nilai Sem 1, Nilai Sem 2, Umur, Status Beasiswa, Pembayaran SPP
+# --- 2. PREPROCESSING ---
+# Target di dataset kamu bernama 'target' (huruf kecil)
+# Kita ubah target menjadi Binary: 1 untuk Dropout, 0 untuk lainnya.
+df['Binary_Target'] = df['target'].apply(lambda x: 1 if x == 'Dropout' else 0)
+
+# Seleksi Fitur
 selected_features = [
-    'Curricular units 1st sem (grade)',
-    'Curricular units 2nd sem (grade)',
-    'Age at enrollment',
-    'Scholarship holder',
+    'Curricular units 1st sem (grade)', 
+    'Curricular units 2nd sem (grade)', 
+    'Age at enrollment', 
+    'Scholarship holder', 
     'Tuition fees up to date'
 ]
 
-target = 'Target'
-
-# Pastikan tidak ada missing value
-df = df.dropna()
-
 X = df[selected_features]
-y = df[target]
+y = df['Binary_Target']
 
-# Encoding Target (Mapping ke angka agar bisa diproses)
-# Logistic Regression butuh angka, tapi library sklearn otomatis menangani string di y,
-# Namun untuk kerapian deployment nanti, kita map manual outputnya di app.py.
+# --- 3. SPLIT DATA ---
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-# 3. Split Data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# 4. Training Model dengan LOGISTIC REGRESSION
-log_reg = LogisticRegression(max_iter=1000)
+# --- 4. TRAINING MODEL ---
+log_reg = LogisticRegression(max_iter=2000, random_state=42, class_weight='balanced')
 log_reg.fit(X_train, y_train)
 
-# 5. Evaluasi
+# --- 5. EVALUASI ---
 y_pred = log_reg.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Akurasi Model Logistic Regression: {accuracy * 100:.2f}%")
-print("\nLaporan Klasifikasi:\n", classification_report(y_test, y_pred))
+print("=== Evaluasi Model Prediksi Dropout ===")
+print(f"Akurasi: {accuracy_score(y_test, y_pred) * 100:.2f}%")
 
-# 6. Simpan Model
-joblib.dump(log_reg, 'student_model.sav')
-print("Model berhasil disimpan sebagai 'student_model.sav'")
+# --- 6. SIMPAN MODEL ---
+model_filename = 'dropout_predictor_model.sav'
+joblib.dump(log_reg, model_filename)
+print(f"\nModel berhasil disimpan sebagai '{model_filename}'")
